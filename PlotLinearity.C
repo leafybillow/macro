@@ -1,19 +1,14 @@
 void PlotLinearity(int runnum){
   gROOT->SetBatch(kTRUE);
   gStyle->SetOptFit(1);
-  TString parity_cut[4] = {"ok_cut&&evt_pairsynch[0]==0&&prev_hel==1&&",
-			   "ok_cut&&evt_pairsynch[0]==0&&prev_hel==0&&",
-			   "ok_cut&&evt_pairsynch[1]==0&&prev_hel==1&&",
-			   "ok_cut&&evt_pairsynch[1]==0&&prev_hel==0&&"};
   
   Plot4Peak(runnum,custom_cut(runnum).Data());  // Plot 4 peaks in Asym_bcms
 
   PlotCorrelation(runnum);  //Plot asym_sams vs asym_bcm
   
   Regression4peak(runnum);//Regression for each 4 peak
+  
   Plot4PeakScan(runnum);
-  
-  
 
 }
 
