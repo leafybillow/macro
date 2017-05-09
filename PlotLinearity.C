@@ -79,7 +79,7 @@ void Plot4PeakScan(int runnum){
       FitGaussian(hbcm);
       c1->SaveAs(Form("h%d.pdf",ibcm));
       asym_bcm[ibcm-1][ipeak] = hbcm->GetMean();
-      asym_bcm_err[ibcm-1][ipeak] = hbcm->GetRMS()/TMath::Sqrt(hsam->GetEntries());
+      asym_bcm_err[ibcm-1][ipeak] = hbcm->GetRMS()/TMath::Sqrt(hbcm->GetEntries());
     }
     gSystem->Exec(Form("pdfunite h*.pdf run%d_asym_bcm_1d_%s.pdf",runnum,leg_text[ipeak].Data()));
     gSystem->Exec("rm h*.pdf");
