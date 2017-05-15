@@ -11,7 +11,7 @@ void RegBPM_4Peak(int runnum){
       // WriteConfig(runnum,ibpm,ipeak);
       // RegBPM(runnum,ibpm,ipeak);
     }
-    //    CombineRegBPM(runnum,ipeak);
+    //CombineRegBPM(runnum,ipeak);
   }
 
   //Then make some other plots and print results
@@ -30,23 +30,42 @@ void CombineRegBPM(int runnum, int ipeak){
   int ok_cut;
   
   for(int ibpm =0; ibpm<10; ibpm++){
-    TString raw_name = "diff_bpm"+bpm_title[ibpm].Data();
-    TString reg_name = "reg_diff_bpm"+bpm_title[ibpm].Data();
+    TString raw_name = "diff_bpm"+bpm_title[ibpm];
+    TString reg_name = "reg_diff_bpm"+bpm_title[ibpm];
 
     reg_bpm_branch[ibpm] = new_tree->Branch(reg_name,&reg_bpm_val[ibpm],Form("%s/D",reg_name.Data()));
     raw_bpm_branch[ibpm] = new_tree->Branch(raw_name,&raw_bpm_val[ibpm],Form("%s/D",raw_name.Data()));
   }
-  cut_branch = new_tree->Branch(cut_branch,&ok_cut,"ok_cut/I");
+  cut_branch = new_tree->Branch("ok_cut",&ok_cut,"ok_cut/I");
 
-
+  TString branch_name_temp;
   for(int ibpm =0; ibpm<10; ibpm++){
     TFile *reg_file = TFile::Open(Form("./ROOTfiles/parity16_%d_regress_%s_%s.root",
 				       runnum,bpm_title[ibpm].Data(),peak_name[ipeak].Data()));
     TTree *reg_tree = reg_file->Get("reg");
-    
+    int nentries = reg_tree->GetEntries();
+    if(ibpm ==0)
+      new_tree->SetEntries(nentries);
 
+    for(int ientry =0;ientry<nentries;ientry++){
+      reg_tree->GetEntry(ientry);
+      branch_name_temp = Form("reg_diff_bpm%s",bpm_title[ibpm].Data());
+      reg_bpm_val[ibpm] = reg_tree->GetLeaf(branch_name_temp)->GetValue(0);
+      reg_bpm_branch[ibpm]->Fill();
+
+      branch_name_temp = Form("diff_bpm%s",bpm_title[9-ibpm].Data());
+      raw_bpm_val[9-ibpm] = reg_tree->GetLeaf(branch_name_temp)->GetValue(0);
+      raw_bpm_branch[ibpm]->Fill();
+
+      if(ibpm ==0){
+	ok_cut = reg->GetLeaf("ok_cut")->GetValue(0);
+	cut_branch->Fill();
+      }
+    }
+    reg_file->Close();
   }
-  
+  combine_file->Write();
+  combine_file->Close();
 }
   
 
