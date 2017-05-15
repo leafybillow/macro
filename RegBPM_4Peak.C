@@ -5,7 +5,8 @@ TString peak_name[4]={"101","001","110","010"};
 TString bpm_title[10] = {"4bx","4by","4ax","4ay","14x","14y","12x","12y","8x","8y"};
 
 void RegBPM_4Peak(int runnum){
-
+  gROOT->SetBatch(kTRUE);
+  gStyle->SetOptFit(1);
   for(int ipeak =0; ipeak<4;ipeak++){
     for(int ibpm =0; ibpm<10; ibpm++){
       // WriteConfig(runnum,ibpm,ipeak);
@@ -13,8 +14,71 @@ void RegBPM_4Peak(int runnum){
     }
     //CombineRegBPM(runnum,ipeak);
   }
-
   //Then make some other plots and print results
+  PrintRMS(runnum);
+  Plot_BPM_Profile(runnum);
+
+}
+void Plot_BPM_Profile(int runnum){
+  TString histo_name;
+  TH1D *hfit;
+  TCanvas *c1  = new TCanvas("c1","c1",800,800);
+  
+  for(int ipeak =0; ipeak<4;ipeak++){
+    TFile *reg_file = TFile::Open(Form("./ROOTfiles/parity16_%d_bpmreg_%s.root",
+				       runnum,peak_name[ipeak].Data()));
+    TTree *reg_tree = reg_file->Get("reg");
+    
+    for(int ibpm =0; ibpm<10;ibpm++){
+      histo_name = Form("hregbpm%d%d",ibpm,ipeak);
+      c1->cd();
+      reg_tree->Draw(Form("reg_diff_bpm%s>>%s",
+			  bpm_title[ibpm].Data(),histo_name.Data()),"ok_cut");
+      hfit = (TH1D*)gDirectory->FindObject(histo_name);
+      FitGaussian(hfit);
+      hfit->SetTitle(Form("reg_diff_bpm%s - %s",bpm_title[ibpm].Data(),peak_name[ipeak].Data()));
+      c1->SaveAs(Form("h%d%d.pdf",ipeak,ibpm));
+    }
+    reg_file->Close();
+  }
+  gSystem->Exec(Form("pdfunite h*.pdf run%d_bpm_1d_profile_4peak.pdf",runnum));
+  gSystem->Exec("rm h*.pdf");
+}
+
+void PrintRMS(int runnum){
+  FILE *table_txt;
+  table_txt = fopen(Form("run%d_table_bpm_rms_4peak.txt",runnum),"w");
+
+  for(int ipeak =0; ipeak<4;ipeak++){
+    TFile *reg_file = TFile::Open(Form("./ROOTfiles/parity16_%d_bpmreg_%s.root",
+				       runnum,peak_name[ipeak].Data()));
+    TTree *reg_tree = reg_file->Get("reg");
+    double bpm_rms[4][10];
+    TString histo_name;
+    TString leaf_name;
+    TH1D *hrms;
+    for(int ibpm =0; ibpm<10;ibpm++){
+      histo_name = Form("hbpm%d",ibpm);
+      leaf_name = Form("reg_diff_bpm%s",bpm_title[ibpm].Data());
+      reg_tree->Draw(Form("%s>>%s",leaf_name.Data(),histo_name.Data()),"ok_cut","goff");
+      hrms = (TH1D*)gDirectory->FindObject(histo_name);
+      bpm_rms[ipeak][ibpm] = hrms->GetRMS();
+    }
+    reg_file->Close();
+  }
+  // Print table in Latex Format
+  for(int ibpm =0; ibpm<10;ibpm++){
+    fprintf(table_txt," \& %s",bpm_title[ibpm].Data());
+  }
+  fprintf(table_txt,"\\\\ \n");
+  for(int ipeak =0;ipeak<4;ipeak++){
+    fprintf(table_txt,"%s",peak_name[ipeak].Data());
+    for(int ibpm =0; ibpm<10; ibpm++){
+      fprintf(table_txt,"\& %1.3lf",bpm_rms[ipeak][ibpm]);
+    }
+    fprintf(table_txt,"\\\\ \n");
+  }
+  fclose(table_txt);
 }
 
 void CombineRegBPM(int runnum, int ipeak){
@@ -107,3 +171,15 @@ void WriteConfig(int runnum,int ibpm,int ipeak){
   fclose(new_config_file);
 }
 
+
+void FitGaussian(TH1 *h1){
+  TF1 *g1 = new TF1("g1","gaus",-10e5,10e5);
+  double par[3]={0,0,0}; // fitting parameter
+  par[1] = h1->GetMean();
+  double rms = h1->GetRMS();
+  par[2] = TMath::Sqrt(rms);
+  par[0] = h1->GetBinContent(h1->GetMaximumBin());
+
+  g1->SetParameters(par);
+  h1->Fit("g1","QR+","",par[1]-3*rms,par[1]+3*rms);
+}
