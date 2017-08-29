@@ -15,9 +15,15 @@ void GetPedestalNoise(int runnum){
   TH1D *hblumi[8];
   double evt_0, evt_1;
   TCanvas *c1 = new TCanvas("c1","c1",800,800);
-
+  c1->cd();
+  
+  P->Draw("(evt_bcm4[0]-evt_bcm4[1])-(evt_bcm3[0]-evt_bcm3[1])>>htbcm","","");
+  // TH1D *hbcm = (TH1D*)gDirectory->FindObject("htbcm");
+  // FitGaussian(hbcm);
+  c1->SaveAs("bcm_pedestal_corre.pdf");
+  
   for(int iblumi = 0; iblumi<8; iblumi++){
-    P->Draw(Form("evt_blumi%d[0]-evt_blumi%d[1]>>h%d",iblumi+1,iblumi+1,iblumi),"","goff");
+    P->Draw(Form("(evt_blumi%d[0]-evt_blumi%d[1])>>h%d",iblumi+1,iblumi+1,iblumi),"","goff");
     hblumi[iblumi] = (TH1D*)gDirectory->FindObject(Form("h%d",iblumi));
     c1->cd();
     hblumi[iblumi]->Draw();
